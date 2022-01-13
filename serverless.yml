@@ -1,0 +1,225 @@
+service: ${self:custom.pOwner}-${self:custom.pEnvironment}-1
+
+custom:
+ # AWS account Id Map that would be used as a map for forming urns.
+  dev-account-id: 869000450638
+  qa-account-id: 869000450638
+  subprod-account-id: 869000450638
+  prod-account-id: 869000450638
+  
+  # Region Map for deployment of lambda functions.
+  dev-region: us-west-2
+  qa-region: us-west-2
+  subprod-region: us-west-2
+  prod-region: us-east-1
+  
+  # Log Retention in Cloudwatch.
+  dev-log-retention: 14
+  qa-log-retention: 7
+  subprod-log-retention: 30
+  prod-log-retention: 30
+
+  # Log Level for debug logging.
+  dev-log-level: info
+  qa-log-level: info
+  subprod-log-level: info
+  prod-log-level: info
+
+  # Auth arn for Authorizer call
+  dev-autharn: arn:aws:lambda:us-west-2:${self:custom.${self:custom.pEnvironment}-account-id}:function:griips-dev-custauth-dev-auth
+  qa-autharn: arn:aws:lambda:us-west-2:${self:custom.${self:custom.pEnvironment}-account-id}:function:griips-qa-custauth-qa-auth
+  subprod-autharn: arn:aws:lambda:us-east-1:${self:custom.${self:custom.pEnvironment}-account-id}:function:griips-subprod-custauth-subprod-auth
+  prod-autharn: arn:aws:lambda:us-east-1:${self:custom.${self:custom.pEnvironment}-account-id}:function:griips-prod-custauth-prod-auth
+  
+  #VPC, subnet, security group configuration
+  dev-vpc: vpc-0b6d863cf6e4a1aa0
+  dev-subnetIds: [subnet-009668e7d4608ea4f, subnet-0a3d1179803707016]
+  dev-securityGroupIds: [sg-0ef285ba0eeac5ab1]
+
+  qa-vpc: vpc-0b6d863cf6e4a1aa0
+  qa-subnetIds: [subnet-009668e7d4608ea4f, subnet-0a3d1179803707016]
+  qa-securityGroupIds: [sg-0ef285ba0eeac5ab1]
+ 
+  prod-vpc: vpc-052d220ffb393465b
+  prod-subnetIds: [subnet-007415e2f5593f032,subnet-0ed97b88cb088d07c,subnet-0ce98ae4a233b24a1]
+  prod-securityGroupIds: [sg-0eb5972a3e2165f4d]
+
+  dev-proxy: prx-00e997fa14adc3a72
+  qa-proxy: prx-0d7387b55aaff6bbc
+  prod-proxy: prx-0f41d7749bb0661df
+  
+  dev-referer: ["https://dev.griips.toyota.com/","http://localhost:4200/"]
+  qa-referer: ["https://qa.griips.toyota.com/"]
+  prod-referer: ["https://griips.toyota.com/"]
+  
+  dev-kmsid: 5641e47d-8f43-42cd-907a-4321aa2aac26
+  qa-kmsid: 5641e47d-8f43-42cd-907a-4321aa2aac26
+  prod-kmsid: 670f1132-3e83-4247-9a58-dd216429943c
+  
+  dev-url: https://dev.griips.toyota.com
+  qa-url: https://qa.griips.toyota.com
+  prod-url: https://griips.toyota.com
+
+#-----------------------------------------------------------------------------
+# Parameter block to define the tagging, naming and billing strategies
+# for this template.
+#-----------------------------------------------------------------------------
+  #  Owner or service name. Example of owner is rti which standards for
+  #  real time inventory.  Ensure that the owner name is kept within 6 letters as
+  #  it will be used in tagging and naming of various resources.
+  pOwner: griips
+
+  #  Name of the vertical to which this app belongs to.  Example of vertical
+  #  would be dfa (Dealer Field and Affiliates), cto (Consumer Portals) etc. Used
+  #  to identify who is responsible for the resource.
+  pVertical: dcx
+  
+  # AWS account Id for this stage.
+  pAccountId: ${self:custom.${self:custom.pEnvironment}-account-id}
+
+
+  # Will contain the TMNA ProjectID and DeptID or anything else through
+  # which the instances will be billed.
+  pCostCenter: 955072-OIT-000645-01-01-01-0001
+
+  #  Name of the environment.  currently
+  #  only 2 values are allowed here i.e. dev -> Development, prod -> Production
+  # [dev, prod]
+  pEnvironment: ${opt:stage, self:provider.stage}
+  ##pEnvironment: dev
+
+  # AWS region under which this Lambda will be deployed.
+  pRegion: ${self:custom.${self:custom.pEnvironment}-region}
+  
+  # Log Level - can be any of 'trace', 'debug', 'info', 'warn', 'error'
+  pLogLevel: ${self:custom.${self:custom.pEnvironment}-log-level}
+
+
+  ##  bucket: ${self:custom.pOwner}-${self:custom.pBucketName}-${self:custom.pEnvironment}
+  # Associate a regional WAF with the AWS API Gateway
+  associateWaf:
+    name: griips-dev-webacl
+    version: V2
+
+#Add the plugin for WAF
+plugins:
+  - serverless-associate-waf
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  #stage: dev
+  region: ${self:custom.pRegion}
+  memorySize: 1024
+  timeout: 20
+  logRetentionInDays: ${self:custom.${self:custom.pEnvironment}-log-retention}
+  deploymentBucket: ${self:custom.pOwner}-${self:custom.pEnvironment}-serverless-${self:custom.pRegion}-deploys
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - ssm:GetParameters  
+      Resource: 
+      - arn:aws:ssm:${self:custom.pRegion}:${self:custom.pAccountId}:parameter/griips_PROXY_HOST
+      - arn:aws:ssm:${self:custom.pRegion}:${self:custom.pAccountId}:parameter/griips_PROXY_REGION
+      - arn:aws:ssm:${self:custom.pRegion}:${self:custom.pAccountId}:parameter/griips_PROXY_CREDS
+      - arn:aws:ssm:${self:custom.pRegion}:${self:custom.pAccountId}:parameter/griips_PROXY_PORT
+    - Effect: Allow
+      Action:
+      - rds-db:connect  
+      Resource: "arn:aws:rds-db:${self:custom.pRegion}:${self:custom.pAccountId}:dbuser:${self:custom.${self:custom.pEnvironment}-proxy}/*" 
+    - Effect: Allow
+      Action:
+      - kms:Decrypt
+      Resource: "arn:aws:kms:${self:custom.pRegion}:${self:custom.pAccountId}:key/${self:custom.${self:custom.pEnvironment}-kmsid}"
+    - Effect: Allow
+      Action:
+      - cloudwatch:*
+      - ec2:DescribeSecurityGroups
+      - ec2:DescribeSubnets
+      - ec2:DescribeVpcs
+      - events:*
+      
+      - rds:Describe*
+      - rds:ListTagsForResource
+      - ssm:DescribeParameters
+      - ses:SendEmail
+      - ses:SendRawEmail
+      Resource: "*"
+
+
+  resourcePolicy:
+    - Effect: Deny
+      Principal: "*"
+      Action: execute-api:Invoke
+      Resource:
+        - execute-api:/*/*/*
+      Condition:
+        StringNotEquals:
+          aws:Referer: ${self:custom.${self:custom.pEnvironment}-referer}          
+    - Effect: Allow
+      Principal: "*"
+      Action: execute-api:Invoke
+      Resource:
+        - execute-api:/*/*/*
+      Condition:
+        StringEquals:
+          aws:Referer: ${self:custom.${self:custom.pEnvironment}-referer}      
+   
+  vpc:
+    VPC: ${self:custom.${self:custom.pEnvironment}-vpc}
+    subnetIds: ${self:custom.${self:custom.pEnvironment}-subnetIds}
+    securityGroupIds: ${self:custom.${self:custom.pEnvironment}-securityGroupIds} 
+
+
+environment:
+    OWNER: ${self:custom.pOwner}
+    ENVIRONMENT: ${self:custom.pEnvironment}
+    REGION: ${self:custom.pRegion}
+    ACCOUNT_ID: ${self:custom.pAccountId}
+    LOG_LEVEL: ${self:custom.pLogLevel}
+    
+  # Tagging for this stack.
+stackTags:
+  Name: ${self:custom.pOwner}-${self:custom.pEnvironment}-${self:service}
+  Owner: ${self:custom.pOwner}
+  Vertical: ${self:custom.pVertical}
+  Env: ${self:custom.pEnvironment}
+  CostCenter: ${self:custom.pCostCenter}
+
+
+functions:       
+  griipssamplefunction:
+    handler: dist/handler.griipssamplefunction
+    events:
+      - http:
+          path: api/griipsSampleAPI
+          method: get
+          authorizer:
+            arn: ${self:custom.${self:custom.pEnvironment}-autharn}
+            resultTtlInSeconds: 0
+          cors: true
+  
+
+resources:
+  Resources:
+    # This response is needed for custom authorizer failures cors support �\_(?)_/�
+    GatewayResponse:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: EXPIRED_TOKEN
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        StatusCode: '401'
+    AuthFailureGatewayResponse:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: UNAUTHORIZED
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        StatusCode: '401'

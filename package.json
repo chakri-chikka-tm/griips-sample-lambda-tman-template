@@ -1,0 +1,49 @@
+{
+  "name": "griips-sample-lambda",
+  "version": "1.0.0",
+  "description": "griips npm serverless sample application using typescript",
+  "scripts": {
+    "serverless": "serverless",
+    "tsc": "tsc",
+    "clean": "rimraf ./dist",
+    "package": "rimraf *.zip && zip -rq temp-app.zip dist node_modules package*.json serverless.yml webpack.config.js source-map-install.js && mv temp-app.zip",
+    "build": "rimraf ./dist && tsc",
+    "test": "mocha -r ts-node/register ./**/*.spec.ts",
+    "deploy": "npm run build && serverless deploy",
+    "lint": "tslint \"src/**/*.ts\" --force",
+    "local": "serverless invoke local -f hello"
+  },
+  "dependencies": {
+    "hot-formula-parser": "^3.0.0",
+    "lodash": "^4.17.20",
+    "python": "0.0.4",
+    "nodecredstash": "1.1.0",
+    "automapper-ts": "^1.9.0",
+    "aws-sdk": "^2.888.0",
+    "aws-xray-sdk": "1.2.0",
+    "jsonschema": "1.2.2",
+    "rimraf": "^3.0.2",
+    "nodemailer": "^6.3.1",
+    "s3-streams": "^0.4.0",
+    "pg": "^8.6.0",
+    "redis": "^3.0.2",
+    "serverless-aws-documentation": "1.0.1",
+    "serverless-associate-waf": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.1",
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^8.0.57",
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
+    "serverless": "^1.83.3",
+    "serverless-webpack": "^5.1.1",
+    "source-map-support": "^0.5.6",
+    "ts-loader": "^4.2.0",
+    "ts-node": "^8.0.1",
+    "typescript": "^3.6.4",
+    "webpack": "^4.5.0"
+  },
+  "license": "UNLICENSED"
+}
